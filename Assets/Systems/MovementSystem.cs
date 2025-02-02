@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using UnityEngine;
 
-
-public class MovementSystem 
+public class MovementSystem : ISystem
 {
     private readonly ComponentManager componentManager;
 
