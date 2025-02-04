@@ -1,4 +1,11 @@
-public struct SizeComponent
+public class SizeComponent : IComponent
 {
-    public int radius;
+    public int Size;
+
+    //Constructeur
+
+    public SizeComponent (int s)
+    {
+        Size = s;
+    }
 }

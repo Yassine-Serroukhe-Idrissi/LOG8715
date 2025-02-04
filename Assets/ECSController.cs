@@ -12,7 +12,7 @@ public class ECSController : MonoBehaviour
     private const float MinInstantColorUpdate = 0.25f;
     private const float ColorUpdateSpeed = 4f;
     #endregion
-    
+
     #region Private attributes
     [SerializeField]
     private Config config;
@@ -34,7 +34,7 @@ public class ECSController : MonoBehaviour
         get
         {
             if (_instance) return _instance;
-            
+
             _instance = FindFirstObjectByType<ECSController>();
             if (!_instance)
             {
@@ -43,7 +43,7 @@ public class ECSController : MonoBehaviour
             return _instance;
         }
     }
-    
+
     private ECSController() { }
     #endregion
 
@@ -51,13 +51,13 @@ public class ECSController : MonoBehaviour
     public Config Config => config;
 
     public List<ISystem> AllSystems => _allSystems;
-    
+
     public void CreateShape(uint id, int initialSize)
     {
         var instance = Instantiate(circlePrefab);
         instance.transform.localScale *= initialSize;
         _gameObjectsForDisplay[id] = instance;
-        _spriteRenderersCache.Add(id, instance.GetComponent<SpriteRenderer>()) ;
+        _spriteRenderersCache.Add(id, instance.GetComponent<SpriteRenderer>());
         _lastColorUpdate.Add(id, 0);
     }
 
@@ -83,7 +83,7 @@ public class ECSController : MonoBehaviour
     {
         if (_nextColorUpdate.ContainsKey(id) && _nextColorUpdate[id] == color)
             return;
-        
+
         if (_spriteRenderersCache[id].color == color)
             return;
 
@@ -93,7 +93,7 @@ public class ECSController : MonoBehaviour
             _lastColorUpdate[id] = time;
             if (_nextColorUpdate.ContainsKey(id))
                 _nextColorUpdate.Remove(id);
-            
+
             _spriteRenderersCache[id].color = color;
             return;
         }
@@ -110,12 +110,15 @@ public class ECSController : MonoBehaviour
         _allSystems = RegisterSystems.GetListOfSystems();
 
         // If system missing from config, add it and enable it.
+
+        Debug.Log("Explosion Size from Config: " + Config.explosionSize);
+
         foreach (var system in _allSystems.Where(system => !Config.SystemsEnabled.ContainsKey(system.Name)))
         {
             Config.SystemsEnabled[system.Name] = true;
         }
     }
-    
+
     // Update is called once per frame
     private void ManageColor()
     {
@@ -126,7 +129,7 @@ public class ECSController : MonoBehaviour
                 _nextColorToDelete.Push(id);
                 continue;
             }
-            
+
             var currentColor = _spriteRenderersCache[id].color;
             _spriteRenderersCache[id].color = Color.Lerp(currentColor, _nextColorUpdate[id], Time.deltaTime * ColorUpdateSpeed);
 
@@ -137,17 +140,21 @@ public class ECSController : MonoBehaviour
         while (_nextColorToDelete.Count > 0)
             _nextColorUpdate.Remove(_nextColorToDelete.Pop());
     }
- 
+
     private void Update()
     {
         ManageColor();
-        
-        foreach (var system in _allSystems.Where(system => Config.SystemsEnabled[system.Name])) {
+
+        foreach (var system in _allSystems.Where(system => Config.SystemsEnabled[system.Name]))
+        {
             system.UpdateSystem();
         }
     }
     #endregion
-    
+
+
+
+
 }
 
 public interface ISystem

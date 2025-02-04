@@ -1,26 +1,26 @@
-using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Updates the position of dynamic circles by adding their velocity.
+/// </summary>
 public class MovementSystem : ISystem
 {
-    private readonly ComponentManager componentManager;
-
-    public MovementSystem(ComponentManager cm) => componentManager = cm;
+    public string Name => "MovementSystem";
 
     public void UpdateSystem()
     {
-        var entities = componentManager.GetEntitiesWithComponents(typeof(PositionComponent), typeof(VelocityComponent));
-        foreach (var entity in entities)
+        foreach (var entity in EntityManager.GetEntitiesWith<PositionComponent, VelocityComponent>())
         {
-            var pos = componentManager.GetComponent<PositionComponent>(entity);
-            var vel = componentManager.GetComponent<VelocityComponent>(entity);
+            var typeComp = entity.GetComponent<CircleTypeComponent>();
+            // Only update dynamic circles.
+            if (typeComp != null && typeComp.Type == CircleType.Static)
+                continue;
 
-            pos.x += vel.dx * Time.deltaTime;
-            pos.y += vel.dy * Time.deltaTime;
+            var posComp = entity.GetComponent<PositionComponent>();
+            var velComp = entity.GetComponent<VelocityComponent>();
 
-            componentManager.AddComponent(entity, pos);
+            posComp.Position += velComp.Velocity * Time.deltaTime;
+            ECSController.Instance.UpdateShapePosition(entity.Id, posComp.Position);
         }
     }
-
-    public string Name => "Movement System";
 }

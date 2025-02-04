@@ -24,6 +24,14 @@ public class ComponentManager
         return default;
     }
 
+    
+    public bool HasComponent<T>(int entityId)
+    {
+        Type componentType = typeof(T);
+        return components.ContainsKey(componentType)
+            && components[componentType].ContainsKey(entityId);
+    }
+
     public IEnumerable<int> GetEntitiesWithComponents(params Type[] types)
     {
         foreach (var entity in GetAllEntities())
