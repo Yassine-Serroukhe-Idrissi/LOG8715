@@ -1,13 +1,8 @@
 using UnityEngine;
 
-public class VelocityComponent : IComponent 
+//Stocke la vitesse du cercle (dx, dy)
+public struct VelocityComponent : IComponent
 {
-    public Vector2 Velocity;
-
-    //Constructer
-
-    public VelocityComponent(Vector2 v)
-    {
-        Velocity = v;
-    }
+    public Vector2 velocity;
 }
+

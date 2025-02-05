@@ -1,17 +1,11 @@
-//Enumeration de type de cercle
+using UnityEngine;
+
 public enum CircleType
 {
     Static,
     Dynamic
 }
-
-public class CircleTypeComponent : IComponent
+public struct CircleTypeComponent : IComponent
 {
-    public CircleType Type;
-
-    //Constructeur
-    public CircleTypeComponent(CircleType t)
-    {
-        Type = t;
-    }
+    public CircleType type;
 }

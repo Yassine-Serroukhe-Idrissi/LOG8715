@@ -1,103 +1,176 @@
-using System.Collections.Generic;
+using NUnit.Framework;
 using UnityEngine;
-
+using System.Collections.Generic;
+using System.Net;
 /// <summary>
-/// Detects collisions between circles, applies collision responses via CollisionUtility,
-/// adjusts circle sizes, and removes circles that shrink to size 0.
+/// identifier les collisions entre les cercles (si le rayon de deux cercles se touchent -> collision detectee)
+/// gestion des rebonds apres collision (avec calculateCollision)
+/// applique les maj des composants velocity et position
+/// on supp ou on transforme les entites si certaines conditions de collision sont remplies 
 /// </summary>
-public class CollisionSystem : ISystem
+public class CollisionSystem :ISystem
 {
     public string Name => "CollisionSystem";
 
     public void UpdateSystem()
     {
-        // Get all entities that have the required components.
-        List<Entity> entities = new List<Entity>(EntityManager.GetEntitiesWith<PositionComponent, VelocityComponent, SizeComponent, CircleTypeComponent>());
-        int count = entities.Count;
+        //On recup les entites qui ont des composants Position et size
+        var entities = World.GetEntitiesWith<PositionComponent, SizeComponent>();
 
-        for (int i = 0; i < count; i++)
+        //on va convertir ces les entites en liste pour eviter les modifs pendant l ite 
+        var entityList = new List<uint>(entities);
+
+        // On parcourt chaque paire d entites pour detecter les collisions
+        for(int i = 0; i<entityList.Count; i++)
         {
-            for (int j = i + 1; j < count; j++)
+            for(int j=i+1; j < entityList.Count; j++)
             {
-                var entityA = entities[i];
-                var entityB = entities[j];
+                var entityA = entityList[i];
+                var entityB = entityList[j];
 
-                var posA = entityA.GetComponent<PositionComponent>();
-                var velA = entityA.GetComponent<VelocityComponent>();
-                var sizeA = entityA.GetComponent<SizeComponent>();
-                var typeA = entityA.GetComponent<CircleTypeComponent>();
-
-                var posB = entityB.GetComponent<PositionComponent>();
-                var velB = entityB.GetComponent<VelocityComponent>();
-                var sizeB = entityB.GetComponent<SizeComponent>();
-                var typeB = entityB.GetComponent<CircleTypeComponent>();
-
-                float radiusA = sizeA.Size / 2f;
-                float radiusB = sizeB.Size / 2f;
-                float minDistance = radiusA + radiusB;
-                if (Vector2.Distance(posA.Position, posB.Position) > minDistance)
-                    continue;
-
-                // Calculate collision response.
-                CollisionResult result = CollisionUtility.CalculateCollision(
-                    posA.Position, velA.Velocity, sizeA.Size,
-                    posB.Position, velB.Velocity, sizeB.Size);
-
-                if (result == null)
-                    continue;
-
-                // Update positions and velocities.
-                posA.Position = result.position1;
-                velA.Velocity = result.velocity1;
-                posB.Position = result.position2;
-                velB.Velocity = result.velocity2;
-
-                ECSController.Instance.UpdateShapePosition(entityA.Id, posA.Position);
-                ECSController.Instance.UpdateShapePosition(entityB.Id, posB.Position);
-
-                // Only dynamic circles change size on collision.
-                if (typeA.Type == CircleType.Static || typeB.Type == CircleType.Static)
-                    continue;
-
-                if (sizeA.Size != sizeB.Size)
+                if (!World.HasEntity(entityA) || !World.HasEntity(entityB))
                 {
-                    if (sizeA.Size > sizeB.Size)
-                    {
-                        sizeA.Size += 1;
-                        sizeB.Size = Mathf.Max(0, sizeB.Size - 1);
-                    }
-                    else
-                    {
-                        sizeB.Size += 1;
-                        sizeA.Size = Mathf.Max(0, sizeA.Size - 1);
-                    }
-                    ECSController.Instance.UpdateShapeSize(entityA.Id, sizeA.Size);
-                    ECSController.Instance.UpdateShapeSize(entityB.Id, sizeB.Size);
+                    Debug.LogWarning($"Une ou les deux entités n'existent plus : entityA = {entityA}, entityB = {entityB}");
+                    continue;
                 }
 
-                // Increment collision counters for potential protection.
-                var protA = entityA.GetComponent<ProtectionComponent>();
-                if (protA != null && sizeA.Size <= ECSController.Instance.Config.protectionSize)
-                    protA.CollisionCount++;
+                var positionA = World.GetComponent<PositionComponent>(entityA);
+                var sizeA = World.GetComponent<SizeComponent>(entityA);
+                var positionB = World.GetComponent<PositionComponent>(entityB);
+                var sizeB = World.GetComponent<SizeComponent>(entityB);
+                //on verif si les cercles se touchent
+                float distance = Vector2.Distance(positionA.position, positionB.position);
 
-                var protB = entityB.GetComponent<ProtectionComponent>();
-                if (protB != null && sizeB.Size <= ECSController.Instance.Config.protectionSize)
-                    protB.CollisionCount++;
+                if (distance <= sizeA.radius + sizeB.radius)
+                {
+                    HandleCollision(entityA, entityB, positionA, positionB, sizeA, sizeB);
+                }
+
+
             }
         }
 
-        // Remove entities that have shrunk to size 0.
-        List<Entity> toRemove = new List<Entity>();
-        foreach (var entity in EntityManager.GetAllEntities())
-        {
-            var sizeComp = entity.GetComponent<SizeComponent>();
-            if (sizeComp != null && sizeComp.Size <= 0)
-            {
-                ECSController.Instance.DestroyShape(entity.Id);
-                toRemove.Add(entity);
-            }
-        }
-        foreach (var entity in toRemove)
-            EntityManager.RemoveEntity(entity.Id);
     }
+
+    private void HandleCollision(uint entityA, uint entityB, PositionComponent positionA,PositionComponent positionB, SizeComponent sizeA, SizeComponent sizeB)
+    {
+        var config = ECSController.Instance.Config;
+        var protectionSize = config.protectionSize;
+        var protectionCollisionCount = config.protectionCollisionCount;
+        
+        //verification de l existence des entite et des components
+        if (!World.HasEntity(entityA) || !World.HasEntity(entityB))
+        {
+            Debug.LogWarning($"Une des entités n'existe plus avant HandleCollision : entityA = {entityA}, entityB = {entityB}");
+            return;
+        }
+        //On verif dabord si les entites ont le composant Velocity
+        if (!World.HasComponent<VelocityComponent>(entityA) || !World.HasComponent<VelocityComponent>(entityB))
+        {
+            Debug.LogWarning($"Une entite na pas de velocityComponent : entityA = {entityA}, entityB = {entityB}");
+            return;
+        }
+
+        if (!World.HasComponent<CircleTypeComponent>(entityA) || !World.HasComponent<VelocityComponent>(entityB))
+        {
+            Debug.LogWarning($"Une entite na pas de TypeComponent : entityA = {entityA}, entityB = {entityB}");
+            return;
+        }
+
+        //Recuperation des components
+        //On recup le type du cercle
+        var typeA = World.GetComponent<CircleTypeComponent>(entityA).type;
+        var typeB = World.GetComponent<CircleTypeComponent>(entityB).type;
+
+        //on recup la velocity des cercles 
+        var velocityA = World.GetComponent<VelocityComponent>(entityA);
+        var velocityB = World.GetComponent<VelocityComponent>(entityB);
+
+        var result = CollisionUtility.CalculateCollision(positionA.position, velocityA.velocity, sizeA.radius, positionB.position, velocityB.velocity, sizeB.radius);
+
+        if (result == null)
+        {
+            Debug.LogWarning($"Pas de collision détectée entre les entités {entityA} et {entityB}.");
+            return;
+        }
+
+        //maj des vitesse et des position
+        velocityA.velocity = result.velocity1;
+        velocityB.velocity = result.velocity2;
+
+        positionA.position = result.position1;
+        positionB.position = result.position2;
+        
+        
+        //on enregistre les modifs dans le world
+        if (World.HasEntity(entityA))
+        {
+            World.SetComponent(entityA, velocityA);
+            World.SetComponent(entityA, positionA);
+
+            ECSController.Instance.UpdateShapePosition(entityA, positionA.position);
+        }
+
+        if (World.HasEntity(entityB))
+        {
+            World.SetComponent(entityB, velocityB);
+            World.SetComponent(entityB, positionB);
+
+            ECSController.Instance.UpdateShapePosition(entityB, positionB.position);
+        }
+
+        //AJOUTER DYNAMIQUE VS STATIQUE Si les deux sont colles  
+        if (typeA == CircleType.Static || typeB == CircleType.Static)
+        {
+            return;
+        }
+        else //si les deux sont dyn : On chnage de taille apres la collision (si ils sont de meme taille on change pas)
+        {
+           
+            //TAILLE 
+
+            if (sizeA.radius > sizeB.radius)
+            {
+                sizeA.radius += 1;
+                sizeB.radius -= 1;
+            }
+            else if (sizeB.radius > sizeA.radius)
+            {
+                sizeA.radius -= 1;
+                sizeB.radius += 1;
+            }
+
+            //On supprime les cercles qui ont une taille de 0
+            if (sizeA.radius <= 0)
+            {
+                Debug.Log($"l entite {entityA} supp car taille = 0");
+                World.RemoveEntity(entityA);
+                ECSController.Instance.DestroyShape(entityA);
+
+            }
+            else if (World.HasEntity(entityA))
+            {
+                World.SetComponent(entityA, sizeA);
+                ECSController.Instance.UpdateShapeSize(entityA, sizeA.radius);
+            }
+
+            if (sizeB.radius <= 0)
+            {
+                Debug.Log($"Entite{entityB} supp car taille = 0");
+                World.RemoveEntity(entityB);
+                ECSController.Instance.DestroyShape(entityB);
+
+            }
+            else if (World.HasEntity(entityB))
+            {
+                World.SetComponent(entityB, sizeB);
+                ECSController.Instance.UpdateShapeSize(entityB, sizeB.radius);
+            }
+
+            
+        }
+        
+      
+    }
+
 }

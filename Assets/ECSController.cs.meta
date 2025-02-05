@@ -3,7 +3,9 @@ guid: 41473946a4b431d41b3d7b7fd9a92a4d
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - config: {instanceID: 0}
+  - circlePrefab: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

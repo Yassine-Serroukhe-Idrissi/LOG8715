@@ -1,13 +1,7 @@
 using UnityEngine;
 
-public class PositionComponent : IComponent
+//Stocke la position (x,y) du cercle
+public struct PositionComponent : IComponent
 {
-    public Vector2 Position;
-
-    //Constructor
-    public PositionComponent(Vector2 p)
-    {
-        Position = p;
-    }
-
+    public Vector2 position;
 }

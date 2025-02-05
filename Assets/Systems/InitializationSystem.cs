@@ -1,10 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// Reads the configuration and creates the initial entities (circles) for the simulation.
-/// This version always adds a VelocityComponent (using a zero vector for static circles),
-/// so that both dynamic and static circles are processed by the collision system.
-/// </summary>
 public class InitializationSystem : ISystem
 {
     public string Name => "InitializationSystem";
@@ -12,38 +7,30 @@ public class InitializationSystem : ISystem
 
     public void UpdateSystem()
     {
-        if (_initialized)
-            return;
+        if (_initialized) return;
 
         var config = ECSController.Instance.Config;
-        foreach (var shapeConfig in config.circleInstancesToSpawn)
+
+        foreach(var shapeConfig in config.circleInstancesToSpawn)
         {
-            // Create a new entity.
-            Entity entity = EntityManager.CreateEntity();
+            var entity = World.CreateEntity();
 
-            // Add the common components.
-            entity.AddComponent(new PositionComponent(shapeConfig.initialPosition));
-            entity.AddComponent(new SizeComponent(shapeConfig.initialSize));
-            entity.AddComponent(new ProtectionComponent());
+            World.AddComponent(entity, new PositionComponent { position = shapeConfig.initialPosition });
+            World.AddComponent(entity, new VelocityComponent { velocity = shapeConfig.initialVelocity });
+            World.AddComponent(entity, new SizeComponent { radius = shapeConfig.initialSize });
+            World.AddComponent(entity, new StateComponent { state = State.None });
+            //Ajout du protection component 
 
-            // Always add a VelocityComponent.
-            // For static circles, this will be a zero vector.
-            entity.AddComponent(new VelocityComponent(shapeConfig.initialVelocity));
+            //Ajout du tye de cercle
+            var isStatic = shapeConfig.initialVelocity == Vector2.zero;
+            World.AddComponent(entity, new CircleTypeComponent { type = isStatic ? CircleType.Static : CircleType.Dynamic });
 
-            // Add the CircleTypeComponent based on the initial velocity.
-            if (shapeConfig.initialVelocity == Vector2.zero)
-            {
-                entity.AddComponent(new CircleTypeComponent(CircleType.Static));
-            }
-            else
-            {
-                entity.AddComponent(new CircleTypeComponent(CircleType.Dynamic));
-            }
 
-            // Create a visual representation.
-            ECSController.Instance.CreateShape(entity.Id, shapeConfig.initialSize);
-            ECSController.Instance.UpdateShapePosition(entity.Id, shapeConfig.initialPosition);
+            //lien avec unity visuel
+            ECSController.Instance.CreateShape(entity, shapeConfig.initialSize);
+            ECSController.Instance.UpdateShapePosition(entity, shapeConfig.initialPosition);
         }
         _initialized = true;
     }
+    
 }
