@@ -85,9 +85,11 @@ public class InputSystem : ISystem
             newEntity.AddComponent(new CircleTypeComponent(CircleType.Dynamic));
             newEntity.AddComponent(new ProtectionComponent());
 
+           newEntity.AddComponent(new ColorComponent(Color.magenta));
+
             ECSController.Instance.CreateShape(newEntity.Id, newSize);
             ECSController.Instance.UpdateShapePosition(newEntity.Id, posComp.Position);
-            ECSController.Instance.UpdateShapeColor(newEntity.Id, new Color(1f, 0.75f, 0.8f)); // pink color
+            ECSController.Instance.UpdateShapeColor(newEntity.Id, Color.magenta); // pink color
         }
         ECSController.Instance.DestroyShape(entity.Id);
         EntityManager.RemoveEntity(entity.Id);

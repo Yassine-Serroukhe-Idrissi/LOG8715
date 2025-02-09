@@ -27,15 +27,31 @@ public class WallCollisionSystem : ISystem
 
             // Left/right boundaries.
             if (posComp.Position.x - radius < minBounds.x && velComp.Velocity.x < 0)
+            {
                 velComp.Velocity = new Vector2(-velComp.Velocity.x, velComp.Velocity.y);
+                ECSController.Instance.UpdateShapeColor(entity.Id, Color.green);
+            }
+                
             else if (posComp.Position.x + radius > maxBounds.x && velComp.Velocity.x > 0)
+            {
+                ECSController.Instance.UpdateShapeColor(entity.Id, Color.green);
                 velComp.Velocity = new Vector2(-velComp.Velocity.x, velComp.Velocity.y);
+            }
+                
 
             // Top/bottom boundaries.
             if (posComp.Position.y - radius < minBounds.y && velComp.Velocity.y < 0)
+            {
+                ECSController.Instance.UpdateShapeColor(entity.Id, Color.green);
                 velComp.Velocity = new Vector2(velComp.Velocity.x, -velComp.Velocity.y);
+            }
+                
             else if (posComp.Position.y + radius > maxBounds.y && velComp.Velocity.y > 0)
+            {
+                ECSController.Instance.UpdateShapeColor(entity.Id, Color.green);
                 velComp.Velocity = new Vector2(velComp.Velocity.x, -velComp.Velocity.y);
+            }
+               
         }
     }
 }

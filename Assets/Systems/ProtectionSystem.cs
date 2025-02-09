@@ -27,10 +27,12 @@ public class ProtectionSystem : ISystem
                     protComp.State = ProtectionState.Cooldown;
                     protComp.CooldownTimer = ECSController.Instance.Config.protectionCooldown;
                     ECSController.Instance.UpdateShapeColor(entity.Id, Color.yellow);
+                    entity.AddComponent(new ColorComponent(Color.yellow));
                 }
                 else
                 {
                     ECSController.Instance.UpdateShapeColor(entity.Id, Color.white);
+                    entity.AddComponent(new ColorComponent(Color.white));
                 }
             }
             else if (protComp.State == ProtectionState.Cooldown)
@@ -41,10 +43,12 @@ public class ProtectionSystem : ISystem
                     protComp.State = ProtectionState.None;
                     protComp.CollisionCount = 0;
                     ECSController.Instance.UpdateShapeColor(entity.Id, new Color(0.5f, 0.5f, 1f));
+                    entity.AddComponent(new ColorComponent(new Color(0.5f, 0.5f, 1f)));
                 }
                 else
                 {
                     ECSController.Instance.UpdateShapeColor(entity.Id, Color.yellow);
+                    entity.AddComponent(new ColorComponent(Color.yellow));
                 }
             }
             else if (protComp.State == ProtectionState.None)
@@ -56,15 +60,19 @@ public class ProtectionSystem : ISystem
                         protComp.State = ProtectionState.Protected;
                         protComp.ProtectionTimer = ECSController.Instance.Config.protectionDuration;
                         ECSController.Instance.UpdateShapeColor(entity.Id, Color.white);
+                        entity.AddComponent(new ColorComponent(Color.white));
                     }
                     else
                     {
                         ECSController.Instance.UpdateShapeColor(entity.Id, new Color(0.5f, 0.5f, 1f));
+                        entity.AddComponent(new ColorComponent(new Color(0.5f, 0.5f, 1f)));
+
                     }
                 }
                 else
                 {
                     ECSController.Instance.UpdateShapeColor(entity.Id, new Color(0f, 0f, 0.5f));
+                    entity.AddComponent(new ColorComponent(new Color(0f, 0f, 0.5f)));
                 }
             }
         }

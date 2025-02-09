@@ -30,4 +30,9 @@ public class Entity
     {
         return _components.ContainsKey(typeof(T));
     }
+
+    public void RemoveComponent<T>()
+    {
+        _components.Remove(typeof(T));
+    }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Entities;
 using UnityEngine;
 
 /// <summary>
@@ -37,7 +38,14 @@ public class CollisionSystem : ISystem
                 float minDistance = radiusA + radiusB;
                 if (Vector2.Distance(posA.Position, posB.Position) > minDistance)
                     continue;
-
+                if (typeA.Type != CircleType.Static)
+                {
+                    ECSController.Instance.UpdateShapeColor(entityA.Id, Color.green);
+                }
+                if (typeB.Type != CircleType.Static)
+                {
+                    ECSController.Instance.UpdateShapeColor(entityB.Id, Color.green);
+                }
                 // Calculate collision response.
                 CollisionResult result = CollisionUtility.CalculateCollision(
                     posA.Position, velA.Velocity, sizeA.Size,
@@ -65,11 +73,21 @@ public class CollisionSystem : ISystem
                     {
                         sizeA.Size += 1;
                         sizeB.Size = Mathf.Max(0, sizeB.Size - 1);
+                        if (sizeA.Size == (ECSController.Instance.Config.explosionSize - 1))
+                        {
+                            ECSController.Instance.UpdateShapeColor(entityA.Id, new Color(1.0f, 0.64f, 0.0f));
+                            entityA.AddComponent(new ColorComponent(new Color(1.0f, 0.64f, 0.0f)));
+                        }
                     }
                     else
                     {
                         sizeB.Size += 1;
                         sizeA.Size = Mathf.Max(0, sizeA.Size - 1);
+                        if (sizeB.Size == (ECSController.Instance.Config.explosionSize - 1))
+                        {
+                            ECSController.Instance.UpdateShapeColor(entityB.Id, new Color(1.0f, 0.64f, 0.0f));
+                            entityB.AddComponent(new ColorComponent(new Color(1.0f, 0.64f, 0.0f)));
+                        }
                     }
                     ECSController.Instance.UpdateShapeSize(entityA.Id, sizeA.Size);
                     ECSController.Instance.UpdateShapeSize(entityB.Id, sizeB.Size);
@@ -78,11 +96,19 @@ public class CollisionSystem : ISystem
                 // Increment collision counters for potential protection.
                 var protA = entityA.GetComponent<ProtectionComponent>();
                 if (protA != null && sizeA.Size <= ECSController.Instance.Config.protectionSize)
+                {
                     protA.CollisionCount++;
+                    Debug.Log("Entity " + entityA.Id + " collision count: " + protA.CollisionCount);
+                }
+                    
 
                 var protB = entityB.GetComponent<ProtectionComponent>();
                 if (protB != null && sizeB.Size <= ECSController.Instance.Config.protectionSize)
+                {
                     protB.CollisionCount++;
+                    Debug.Log("Entity " + entityB.Id + " collision count: " + protB.CollisionCount);
+                }
+                    
             }
         }
 
